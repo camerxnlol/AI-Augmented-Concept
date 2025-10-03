@@ -2,17 +2,25 @@
   "name": "gemini-schedule-demo",
   "version": "1.0.0",
   "description": "A demo application showing how to use Google's Gemini API to create student schedules",
-  "main": "dist/dayplanner-tests.js",
+  "main": "dist/songrecommender-tests.js",
   "scripts": {
-    "build": "tsc",
-    "start": "npm run build && node dist/dayplanner-tests.js",
-    "dev": "ts-node --transpile-only dayplanner-tests.ts",
-    "test": "npm run build && node dist/dayplanner-tests.js",
-    "manual": "npm run build && node -e \"require('./dist/dayplanner-tests.js').testManualScheduling()\"",
-    "llm": "npm run build && node -e \"require('./dist/dayplanner-tests.js').testLLMScheduling()\"",
-    "mixed": "npm run build && node -e \"require('./dist/dayplanner-tests.js').testMixedScheduling()\""
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc",
+    "start": "npm run build && node dist/songrecommender-tests.js",
+    "dev": "ts-node --transpile-only songrecommender-tests.ts",
+    "test": "npm run build && node dist/songrecommender-tests.js",
+    "manual": "npm run build && node -e \"require('./dist/songrecommender-tests.js').testManualRecommendation()\"",
+    "llm": "npm run build && node -e \"require('./dist/songrecommender-tests.js').testLLMRecommendation()\"",
+    "mixed": "npm run build && node -e \"require('./dist/songrecommender-tests.js').testMixedScheduling && require('./dist/songrecommender-tests.js').testMixedScheduling()\""
   },
-  "keywords": ["gemini", "ai", "schedule", "student", "demo", "typescript"],
+  "keywords": [
+    "gemini",
+    "ai",
+    "schedule",
+    "student",
+    "demo",
+    "typescript"
+  ],
   "author": "Student Demo",
   "license": "MIT",
   "dependencies": {

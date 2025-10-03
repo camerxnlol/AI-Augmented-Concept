@@ -2,7 +2,9 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020"],
+    "lib": [
+      "ES2020"
+    ],
     "outDir": "./dist",
     "rootDir": "./",
     "strict": true,
@@ -20,9 +22,9 @@
     "*.ts"
   ],
   "files": [
-    "dayplanner.ts",
+    "songrecommender.ts",
     "gemini-llm.ts",
-    "dayplanner-tests.ts"
+    "songrecommender-tests.ts"
   ],
   "exclude": [
     "node_modules",
