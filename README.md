@@ -1,182 +1,62 @@
-# DayPlanner 
-A simple day planner. This implementation focuses on the core concept of organizing activities for a single day with both manual and AI-assisted scheduling.
+# Assignment 3: An AI-Augmented Concept
+## Augment the design of a concept
+### Un-augmented design
+**concept** SongRecommender\
+**purpose** To introduce a new song for the user each day\
+**principle** Each day, the system presents a new song to the user, chosen from a list of songs. The user can listen to the song. Recommendations refresh daily and past recommendations can be revisited.\
+**state**\
+&nbsp;&nbsp; a set of `RecommendedSongs` with\
+&nbsp;&nbsp;&nbsp;&nbsp; a name String\
+&nbsp;&nbsp;&nbsp;&nbsp; an artist String\
+&nbsp;&nbsp;&nbsp;&nbsp; a genre String\
+&nbsp;&nbsp; a set of `NotYetRecommendedSongs` with\
+&nbsp;&nbsp;&nbsp;&nbsp; a name String\
+&nbsp;&nbsp;&nbsp;&nbsp; an artist String\
+&nbsp;&nbsp;&nbsp;&nbsp; a genre String\
+**actions**\
+&nbsp;&nbsp; `generateRecommendation()`\
+&nbsp;&nbsp;&nbsp;&nbsp; **effect** create a new daily recommendation and add it to `RecommendedSongs`\
+&nbsp;&nbsp;`addSong(song: Song)`\
+&nbsp;&nbsp;&nbsp;&nbsp; **requires** song to not be recommended yet\
+&nbsp;&nbsp;&nbsp;&nbsp; **effect** adds song to the catalog of songs to be selected\
+&nbsp;&nbsp;`removeSong(song: Song)`\
+&nbsp;&nbsp;&nbsp;&nbsp;**requires** song to be in `NotYetRecommendedSongs`\
+&nbsp;&nbsp;&nbsp;&nbsp;**effect** removes song from `NotYetRecommendedSongs`
 
-## Concept: DayPlanner
+`addSong()` is intended for manual use, when we want to add to the catalog of songs to eventually be recommended. `generateRecommendation()` is then called to choose a song from this catalog and move it to the `RecommendedSongs` set.
+### Additions/Modifications for AI-Augmented Concept
+`generateRecommendation(count: Number)`\
+&nbsp;&nbsp; **effect** create `count` new recommendations\
+`generateRecommendationFromLLM(count: Number, basisSongs?: Song[])`\
+&nbsp;&nbsp; **effect** If recommended songs is passed in, the LLM will generate `count` recommendations based on the songs that were already recommended. If recommended songs is not passed in, the LLM will generate `count` songs that are "trending".
 
-**Purpose**: Help you organize activities for a single day  
-**Principle**: You can add activities one at a time, assign them to times, and then observe the completed schedule
+The goal here is to use the LLM instead of a complex recommendation system. We will attempt to make the LLM return a structured output of song name, artist, genre, etc. The `count` many recommendations is an attempt to add some complexity to the request we sent to the LLM.
 
-### Core State
-- **Activities**: Set of activities with title, duration, and optional startTime
-- **Assignments**: Set of activity-to-time assignments
-- **Time System**: All times in half-hour slots starting at midnight (0 = 12:00 AM, 13 = 6:30 AM)
+## Design the user interaction
+<img src="./assets/project_1_ui_sketches_2.png" width="600"/>
 
-### Core Actions
-- `addActivity(title: string, duration: number): Activity`
-- `removeActivity(activity: Activity)`
-- `assignActivity(activity: Activity, startTime: number)`
-- `unassignActivity(activity: Activity)`
-- `requestAssignmentsFromLLM()` - AI-assisted scheduling with hardwired preferences
 
-## Prerequisites
+## Implement your concept
+See the implementation in [songrecommender.ts](./songrecommender.ts)\
+See the tests in [songrecommender-tests.ts](./songrecommender-tests.ts) and run with `npm start`\
+See the concept spec in [songrecommender.spec](./songrecommender.spec)\
+The initial testing suite includes 3 tests: manual recommendation, LLM recommendation, and removal of a song. This covers the bare-bones functionality of every action in our concept.
+## Explore richer test cases and prompts
+See the added tests in [songrecommender-tests.ts](./songrecommender-tests.ts). In addition to outputting the correct format of data, the LLM must also output the correct number of songs. Additionally we test that the LLM is able to provide diverse recommendations when given a list of input songs.
 
-- **Node.js** (version 14 or higher)
-- **TypeScript** (will be installed automatically)
-- **Google Gemini API Key** (free at [Google AI Studio](https://makersuite.google.com/app/apikey))
+Additional test one (test 4 in the suite) tests that the LLM is able to generate multiple songs if requested. This is simply done by requesting the LLM to generate more than 1 song. The LLM doesn't seem to have a hard time generating the correct length of songs. 
 
-## Quick Setup
+Additional test two (test 5 in the suite) gives the LLM a basis to recommend on. When I provide this basis of songs, it does not provide a diverse recommendation compared to the basis (reminder that we want the LLM to recommend a very different song so the user can grow their music taste). I was able to get around this by using stronger language in the prompt and moving this requirement to the critical section. After this I saw much more diverse results.
 
-### 0. Clone the repo locally and navigate to it
-```cd intro-gemini-schedule```
-
-### 1. Install Dependencies
-
-```bash
-npm install
+Additional test three (test 6 in the suite) combines the above two behaviors into one use case. The user has some recommended songs in the past, and we ask the LLM to generate >1 songs that are different from the basis. This works as expected, since I was able to get the above behaviors to work correctly.
+## Add validators to your code
+1) The LLM may duplicate a recommendation in a single output. When we ask the LLM to generate recommendations and `count > 1`, we can reinforce correct behavior by using stronger language in the prompt and checking the output of the LLM manually. I added:
 ```
-
-### 2. Add Your API Key
-
-**Why use a template?** The `config.json` file contains your private API key and should never be committed to version control. The template approach lets you:
-- Keep the template file in git (safe to share)
-- Create your own `config.json` locally (keeps your API key private)
-- Easily set up the project on any machine
-
-**Step 1:** Copy the template file:
-```bash
-cp config.json.template config.json
-```
-
-**Step 2:** Edit `config.json` and add your API key:
-```json
-{
-  "apiKey": "YOUR_GEMINI_API_KEY_HERE"
+if (!Array.isArray(songs) || songs.length !== count) {
+    throw new Error(`LLM did not return exactly ${count} songs. Got ${Array.isArray(songs) ? songs.length : 'invalid response'}`);
 }
 ```
+2) The LLM may recommend a song that the user has already received as a recommendation in the past. This is possible especially as the basis of recommendation gets big. Similar to the previous problem, we can reinforce the prompt and check manually. I added this to the prompt: 4. DO NOT RECOMMEND SONGS THAT ARE ALREADY IN THE CATALOG. 5. DO NOT RECOMMEND THE SAME SONG TWICE.
+3) The LLM may hallucinate songs that don't actually exist. This is the toughest problem to solve because without a database of every song, there isn't a good way to guarantee the an outputted song exists. However, there are ways to mitigate this like reinforcing the prompt and feeding the output into another API call that would validate that the songs exist. This was done by implementing `verifySongsExistPrompt()` and `parseVerifySongsExistResponse()`. 
 
-**To get your API key:**
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Copy the key and paste it into `config.json` (replacing `YOUR_GEMINI_API_KEY_HERE`)
 
-### 3. Run the Application
-
-**Run all test cases:**
-```bash
-npm start
-```
-
-**Run specific test cases:**
-```bash
-npm run manual    # Manual scheduling only
-npm run llm       # LLM-assisted scheduling only
-npm run mixed     # Mixed manual + LLM scheduling
-```
-
-## File Structure
-
-```
-dayplanner/
-├── package.json              # Dependencies and scripts
-├── tsconfig.json             # TypeScript configuration
-├── config.json               # Your Gemini API key
-├── dayplanner-types.ts       # Core type definitions
-├── dayplanner.ts             # DayPlanner class implementation
-├── dayplanner-llm.ts         # LLM integration
-├── dayplanner-tests.ts       # Test cases and examples
-├── dist/                     # Compiled JavaScript output
-└── README.md                 # This file
-```
-
-## Test Cases
-
-The application includes three comprehensive test cases:
-
-### 1. Manual Scheduling
-Demonstrates adding activities and manually assigning them to time slots:
-
-```typescript
-const planner = new DayPlanner();
-const breakfast = planner.addActivity('Breakfast', 1); // 30 minutes
-planner.assignActivity(breakfast, 14); // 7:00 AM
-```
-
-### 2. LLM-Assisted Scheduling
-Shows AI-powered scheduling with hardwired preferences:
-
-```typescript
-const planner = new DayPlanner();
-planner.addActivity('Morning Jog', 2);
-planner.addActivity('Math Homework', 4);
-await llm.requestAssignmentsFromLLM(planner);
-```
-
-### 3. Mixed Scheduling
-Combines manual assignments with AI assistance for remaining activities.
-
-## Sample Output
-
-```
-📅 Daily Schedule
-==================
-7:00 AM - Breakfast (30 min)
-8:00 AM - Morning Workout (1 hours)
-10:00 AM - Study Session (1.5 hours)
-1:00 PM - Lunch (30 min)
-3:00 PM - Team Meeting (1 hours)
-7:00 PM - Dinner (30 min)
-9:00 PM - Evening Reading (1 hours)
-
-📋 Unassigned Activities
-========================
-All activities are assigned!
-```
-
-## Key Features
-
-- **Simple State Management**: Activities and assignments stored in memory
-- **Flexible Time System**: Half-hour slots from midnight (0-47)
-- **Query-Based Display**: Schedule generated on-demand, not stored sorted
-- **AI Integration**: Hardwired preferences in LLM prompt (no external hints)
-- **Conflict Detection**: Prevents overlapping activities
-- **Clean Architecture**: First principles implementation with no legacy code
-
-## LLM Preferences (Hardwired)
-
-The AI uses these built-in preferences:
-- Exercise activities: Morning (6:00 AM - 10:00 AM)
-- Study/Classes: Focused hours (9:00 AM - 5:00 PM)
-- Meals: Regular intervals (breakfast 7-9 AM, lunch 12-1 PM, dinner 6-8 PM)
-- Social/Relaxation: Evenings (6:00 PM - 10:00 PM)
-- Avoid: Demanding activities after 10:00 PM
-
-## Troubleshooting
-
-### "Could not load config.json"
-- Ensure `config.json` exists with your API key
-- Check JSON format is correct
-
-### "Error calling Gemini API"
-- Verify API key is correct
-- Check internet connection
-- Ensure API access is enabled in Google AI Studio
-
-### Build Issues
-- Use `npm run build` to compile TypeScript
-- Check that all dependencies are installed with `npm install`
-
-## Next Steps
-
-Try extending the DayPlanner:
-- Add weekly scheduling
-- Implement activity categories
-- Add location information
-- Create a web interface
-- Add conflict resolution strategies
-- Implement recurring activities
-
-## Resources
-
-- [Google Generative AI Documentation](https://ai.google.dev/docs)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
