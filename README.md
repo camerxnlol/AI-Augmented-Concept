@@ -34,6 +34,7 @@ The goal here is to use the LLM instead of a complex recommendation system. We w
 
 ## Design the user interaction
 <img src="./assets/project_1_ui_sketches_2.png" width="600"/>
+This represents the happy path for using this AI feature. The user will choose from system-generated recommendations or AI-generated recommendations and the amount that they want. They will be taken to the same results screen regardless of their choice, but the AI-generated recommendations will be distinguished from system-generated ones. Not pictured is what happens when the AI recommendations are malformed/the AI breaks. There will be an error message in this case and the app will prompt the user to try again or switch to system-generated recommendations.
 
 
 ## Implement your concept
